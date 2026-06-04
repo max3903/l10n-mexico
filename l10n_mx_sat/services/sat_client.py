@@ -34,12 +34,14 @@ class SatClient:
         :return: SAT authentication token
         :rtype: str
         """
-        session = SATPortal(self._signer).login()
-        if not session:
+        portal = SATPortal(self._signer)
+        portal.login()
+        token = portal.session_token
+        if not token:
             raise ValueError("SAT returned an empty token.")
-        return session
+        return token
 
-    def request_download(self, token, rfc, fecha_inicial, fecha_final, **kwargs):
+    def request_download(self, rfc, fecha_inicial, fecha_final, **kwargs):
         """Send a download request to the SAT (Descarga Masiva).
 
         Defaults estado_comprobante to EstadoComprobante.VIGENTE.
@@ -52,7 +54,7 @@ class SatClient:
             fecha_inicial, fecha_final, rfc, **kwargs
         )
 
-    def verify_download(self, token, rfc, id_solicitud):
+    def verify_download(self, id_solicitud):
         """Check the status of a download request.
 
         :return: dict with keys estado_solicitud, paquetes, numero_cfdis, mensaje
@@ -60,7 +62,7 @@ class SatClient:
         sat = SAT(self._signer)
         return sat.recover_comprobante_status(id_solicitud)
 
-    def download_package(self, token, rfc, id_paquete):
+    def download_package(self, id_paquete):
         """Download a package from the SAT.
 
         :return: dict with keys cod_estatus, paquete_b64, mensaje

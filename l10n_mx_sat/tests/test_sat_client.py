@@ -1,7 +1,7 @@
 # Copyright 2026 Open Source Integrators
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl.html).
 
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 from odoo.tests import tagged
 from odoo.tests.common import TransactionCase
@@ -22,18 +22,23 @@ class TestSatClient(TransactionCase):
 
     @patch(f"{_SVC}.SATPortal")
     @patch(f"{_SVC}.Signer")
-    def test_authenticate_returns_token(self, MockSigner, MockSATPortal):
-        MockSATPortal.return_value.login.return_value = "tok-123"
+    def test_authenticate_returns_token(self, MockSigner, MockPortal):
+        mock_portal = MagicMock()
+        mock_portal.session_token = "tok-123"
+        MockPortal.return_value = mock_portal
         client = SatClient(b"cer", b"key", "pwd")
 
         token = client.authenticate()
         self.assertEqual(token, "tok-123")
-        MockSATPortal.assert_called_once_with(MockSigner.return_value)
+        MockPortal.assert_called_once_with(MockSigner.return_value)
+        mock_portal.login.assert_called_once()
 
     @patch(f"{_SVC}.SATPortal")
     @patch(f"{_SVC}.Signer")
-    def test_authenticate_empty_token_raises(self, MockSigner, MockSATPortal):
-        MockSATPortal.return_value.login.return_value = ""
+    def test_authenticate_empty_token_raises(self, MockSigner, MockPortal):
+        mock_portal = MagicMock()
+        mock_portal.session_token = ""
+        MockPortal.return_value = mock_portal
         client = SatClient(b"cer", b"key", "pwd")
 
         with self.assertRaises(ValueError):
@@ -48,7 +53,7 @@ class TestSatClient(TransactionCase):
         )
         client = SatClient(b"cer", b"key", "pwd")
 
-        result = client.request_download("tok", "RFC1", "2026-01-01", "2026-01-31")
+        result = client.request_download("RFC1", "2026-01-01", "2026-01-31")
 
         self.assertEqual(result, expected)
 
@@ -61,7 +66,7 @@ class TestSatClient(TransactionCase):
         MockSAT.return_value.recover_comprobante_received_request.return_value = {}
         client = SatClient(b"cer", b"key", "pwd")
 
-        client.request_download("tok", "RFC1", "2026-01-01", "2026-01-31")
+        client.request_download("RFC1", "2026-01-01", "2026-01-31")
 
         call_kwargs = (
             MockSAT.return_value.recover_comprobante_received_request.call_args
@@ -80,7 +85,6 @@ class TestSatClient(TransactionCase):
         client = SatClient(b"cer", b"key", "pwd")
 
         client.request_download(
-            "tok",
             "RFC1",
             "2026-01-01",
             "2026-01-31",
@@ -101,7 +105,7 @@ class TestSatClient(TransactionCase):
         MockSAT.return_value.recover_comprobante_status.return_value = expected
         client = SatClient(b"cer", b"key", "pwd")
 
-        result = client.verify_download("tok", "RFC1", "SOL-1")
+        result = client.verify_download("SOL-1")
 
         self.assertEqual(result, expected)
         MockSAT.return_value.recover_comprobante_status.assert_called_once_with(
@@ -115,7 +119,7 @@ class TestSatClient(TransactionCase):
         MockSAT.return_value.recover_comprobante_package.return_value = expected
         client = SatClient(b"cer", b"key", "pwd")
 
-        result = client.download_package("tok", "RFC1", "PKG-1")
+        result = client.download_package("PKG-1")
 
         self.assertEqual(result, expected)
         MockSAT.return_value.recover_comprobante_package.assert_called_once_with(
